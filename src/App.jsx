@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useReducer, useRef } from "react";
 import { Puzzle } from "lucide-react";
+import {
+  Canvas,
+  Inspector,
+  PluginPalette,
+  Topbar,
+  FooterDocs,
+} from "./components/editor";
 
 // Imports core
 import Emitter from "./core/EventEmitter.js";
@@ -28,13 +35,13 @@ import {
 } from "./components/blocks";
 
 // Imports des composants éditeur
-import {
-  Canvas,
-  Inspector,
-  PluginPalette,
-  Topbar,
-  FooterDocs,
-} from "./components/editor";
+// import {
+//   Canvas,
+//   Inspector,
+//   PluginPalette,
+//   Topbar,
+//   FooterDocs,
+// } from "./components/editor";
 
 // Imports contexte
 import EditorContext from "./context/EditorContext.jsx";
@@ -83,6 +90,12 @@ const initialState = () => {
     flags: defaultFlags,
     nodeIndex: indexDoc(doc.root),
     errors: [],
+    // AJOUT: Configuration des colonnes
+    columnLayout: {
+      count: 1,
+      distribution: [100],
+      enabled: true,
+    },
   };
 };
 
@@ -198,8 +211,6 @@ function registerDefaultCommands(bus) {
 
       // 5. Émettre l'événement
       ctx.emitter.emit("node:moved", { nodeId, newParentId, position });
-
-      console.log("Node moved successfully:", { nodeId, newParentId });
     } catch (error) {
       console.error("Error moving node:", error);
       ctx.dispatch({
@@ -220,6 +231,55 @@ function registerDefaultCommands(bus) {
 
     ctx.emitter.emit("nodes:reordered", { parentId, oldIndex, newIndex });
   });
+
+  // ✅ AJOUT : Nouvelles commandes pour les colonnes
+  bus.register("SET_COLUMN_LAYOUT", (ctx, { count, distribution }) => {
+    ctx.dispatch({
+      type: "SET_COLUMN_LAYOUT",
+      layout: { count, distribution, enabled: count > 1 },
+    });
+    ctx.emitter.emit("layout:changed", { count, distribution });
+  });
+
+  bus.register(
+    "MOVE_NODE_TO_SECTION_COLUMN",
+    (ctx, { nodeId, sectionId, columnIndex }) => {
+      try {
+        const oldRoot = ctx.state.doc.root;
+        const nodeToMove = findNodeById(oldRoot, nodeId);
+        if (!nodeToMove) return;
+
+        // Supprimer de l'ancien parent
+        const rootWithoutNode = removeNodeImmutably(oldRoot, nodeId);
+
+        // Ajouter avec métadonnée de colonne
+        const nodeWithColumn = { ...nodeToMove, columnIndex };
+        const newRoot = addNodeImmutably(
+          rootWithoutNode,
+          sectionId,
+          nodeWithColumn
+        );
+
+        const newDoc = { ...ctx.state.doc, root: newRoot };
+        ctx.dispatch({ type: "LOAD_DOC", doc: newDoc });
+      } catch (error) {
+        console.error("Error moving node to section column:", error);
+      }
+    }
+  );
+
+  bus.register(
+    "MOVE_NODE_TO_COLUMN",
+    (ctx, { nodeId, targetColumnIndex, insertIndex }) => {
+      ctx.dispatch({
+        type: "MOVE_NODE_TO_COLUMN",
+        nodeId,
+        targetColumnIndex,
+        insertIndex,
+      });
+      ctx.emitter.emit("node:movedToColumn", { nodeId, targetColumnIndex });
+    }
+  );
 }
 
 /*************************************

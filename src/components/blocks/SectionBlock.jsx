@@ -1,4 +1,3 @@
-import React from "react";
 import { Box } from "lucide-react";
 import { Input } from "../ui";
 
@@ -10,7 +9,6 @@ const SectionBlock = {
   render: (data, ctx) => (
     <div className={`${data.bg} ${data.padding}`}>
       <div className="max-w-5xl mx-auto">
-        {/* Placeholder - les enfants seront gérés par le système parent */}
         <div className="space-y-3">
           {ctx.node.children && ctx.node.children.length > 0 && (
             <div className="text-sm text-gray-500 p-4 border-2 border-dashed rounded">

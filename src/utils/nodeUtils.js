@@ -4,7 +4,22 @@
 
 export function updateNodeImmutably(node, id, patch) {
   if (node.id === id) {
-    return { ...node, data: { ...(node.data || {}), ...(patch || {}) } };
+    // ✅ CORRECTION: Séparer les mises à jour data vs nœud
+    const { data, ...nodeProps } = patch;
+
+    const updatedNode = { ...node };
+
+    // Mettre à jour les propriétés du nœud (columnLayout, etc.)
+    if (Object.keys(nodeProps).length > 0) {
+      Object.assign(updatedNode, nodeProps);
+    }
+
+    // Mettre à jour node.data séparément
+    if (data) {
+      updatedNode.data = { ...(node.data || {}), ...data };
+    }
+
+    return updatedNode;
   }
   if (!node.children) return node;
   const children = node.children.map((c) => updateNodeImmutably(c, id, patch));

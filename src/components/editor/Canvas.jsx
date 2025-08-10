@@ -1,4 +1,3 @@
-import React from "react";
 import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core";
 import useEditor from "../../hooks/useEditor.js";
 import NodeView from "./NodeView.jsx";
@@ -10,28 +9,21 @@ function Canvas() {
   const root = state.doc.root;
 
   const handleDragStart = (event) => {
-    console.log("Drag started:", event.active.id);
+    // Drag started
   };
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
 
-    console.log("=== DRAG END DEBUG ===");
-    console.log("Over.id:", over?.id);
-
     if (!over) {
-      console.log("No drop target");
       return;
     }
 
     const draggedNodeId = active.id;
     const dropTarget = over.id;
 
-    console.log("Drop target detected:", dropTarget);
-
     try {
       if (dropTarget === "root" || dropTarget === "root-empty") {
-        console.log("Moving to root");
         await bus.exec(editorCtx, {
           type: "MOVE_NODE",
           nodeId: draggedNodeId,
@@ -39,11 +31,23 @@ function Canvas() {
         });
       } else if (dropTarget.includes("-children")) {
         const parentId = dropTarget.replace("-children", "");
-        console.log("Moving to section:", parentId);
         await bus.exec(editorCtx, {
           type: "MOVE_NODE",
           nodeId: draggedNodeId,
           newParentId: parentId,
+        });
+      } else if (
+        dropTarget.includes("section-") &&
+        dropTarget.includes("-column-")
+      ) {
+        const parts = dropTarget.split("-");
+        const sectionId = parts[1];
+        const columnIndex = parseInt(parts[3]);
+        await bus.exec(editorCtx, {
+          type: "MOVE_NODE_TO_SECTION_COLUMN",
+          nodeId: draggedNodeId,
+          sectionId: sectionId,
+          columnIndex: columnIndex,
         });
       }
     } catch (error) {
@@ -70,7 +74,6 @@ function Canvas() {
         onDragEnd={handleDragEnd}
       >
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
-          {/* PAS de zone de drop ici - elle interfère */}
           <div className="min-h-[400px] space-y-4">
             {root.children?.length ? (
               root.children.map((n, idx) => (

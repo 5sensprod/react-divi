@@ -170,6 +170,31 @@ function reducer(state, action) {
       return { ...state, errors: [] };
     }
 
+    case "MOVE_NODE_TO_SECTION_COLUMN": {
+      const { nodeId, sectionId, columnIndex } = action;
+
+      const nodeToMove = findNodeById(state.doc.root, nodeId);
+      if (!nodeToMove) return state;
+
+      let nextRoot = removeNodeImmutably(state.doc.root, nodeId);
+
+      const nodeWithColumn = {
+        ...nodeToMove,
+        columnIndex: columnIndex,
+      };
+
+      nextRoot = addNodeImmutably(nextRoot, sectionId, nodeWithColumn);
+
+      const nextDoc = { ...state.doc, root: nextRoot };
+
+      return commit({
+        ...state,
+        doc: nextDoc,
+        nodeIndex: indexDoc(nextRoot),
+        selection: nodeId,
+      });
+    }
+
     default:
       return state;
   }
