@@ -12,6 +12,12 @@ import reducer from "./core/reducer.js";
 import { uid, clone, debounce } from "./utils/helpers.js";
 import { saveDoc, loadDoc } from "./utils/persistence.js";
 
+import {
+  findNodeById,
+  removeNodeImmutably,
+  addNodeImmutably,
+  insertNodeAtPosition,
+} from "./utils/nodeUtils.js";
 // Imports des blocs
 import {
   SectionBlock,
@@ -155,6 +161,64 @@ function registerDefaultCommands(bus) {
   bus.register("REMOVE_BLOCK", (ctx, { id }) => {
     ctx.dispatch({ type: "DELETE_NODE", id });
     ctx.emitter.emit("block:remove", { id });
+  });
+
+  // Nouvelle commande pour déplacer un nœud
+  bus.register("MOVE_NODE", (ctx, { nodeId, newParentId, position = -1 }) => {
+    try {
+      // 1. Trouver le nœud à déplacer
+      const oldRoot = ctx.state.doc.root;
+      const nodeToMove = findNodeById(oldRoot, nodeId);
+      if (!nodeToMove) {
+        console.warn("Node not found:", nodeId);
+        return;
+      }
+
+      // 2. Supprimer de l'ancien parent
+      const rootWithoutNode = removeNodeImmutably(oldRoot, nodeId);
+
+      // 3. Ajouter au nouveau parent
+      let newRoot;
+      if (position === -1) {
+        // Ajouter à la fin
+        newRoot = addNodeImmutably(rootWithoutNode, newParentId, nodeToMove);
+      } else {
+        // Insérer à une position spécifique
+        newRoot = insertNodeAtPosition(
+          rootWithoutNode,
+          newParentId,
+          nodeToMove,
+          position
+        );
+      }
+
+      // 4. Mettre à jour le document
+      const newDoc = { ...ctx.state.doc, root: newRoot };
+      ctx.dispatch({ type: "LOAD_DOC", doc: newDoc });
+
+      // 5. Émettre l'événement
+      ctx.emitter.emit("node:moved", { nodeId, newParentId, position });
+
+      console.log("Node moved successfully:", { nodeId, newParentId });
+    } catch (error) {
+      console.error("Error moving node:", error);
+      ctx.dispatch({
+        type: "ADD_ERROR",
+        error: `Erreur déplacement: ${error.message}`,
+      });
+    }
+  });
+
+  // Commande pour réorganiser les enfants
+  bus.register("REORDER_NODES", (ctx, { parentId, oldIndex, newIndex }) => {
+    ctx.dispatch({
+      type: "REORDER_CHILDREN",
+      parentId,
+      from: oldIndex,
+      to: newIndex,
+    });
+
+    ctx.emitter.emit("nodes:reordered", { parentId, oldIndex, newIndex });
   });
 }
 

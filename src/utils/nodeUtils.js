@@ -65,3 +65,35 @@ export function indexDoc(root) {
   })(root);
   return map;
 }
+
+export function insertNodeAtPosition(node, parentId, newNode, position) {
+  if (node.id === parentId) {
+    const children = [...(node.children || [])];
+    children.splice(position, 0, newNode);
+    return { ...node, children };
+  }
+
+  const children = (node.children || []).map((c) =>
+    insertNodeAtPosition(c, parentId, newNode, position)
+  );
+  return { ...node, children };
+}
+
+// Trouver l'index d'un nœud dans son parent
+export function findNodeIndex(root, nodeId) {
+  function search(node, parentChildren = null, index = -1) {
+    if (parentChildren && parentChildren[index]?.id === nodeId) {
+      return { parent: node, index };
+    }
+
+    if (node.children) {
+      for (let i = 0; i < node.children.length; i++) {
+        const result = search(node.children[i], node.children, i);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+
+  return search(root);
+}
