@@ -1,4 +1,3 @@
-import React from "react";
 import useEditor from "../../hooks/useEditor.js";
 import NodeView from "./NodeView.jsx";
 import EmptyState from "./EmptyState.jsx";
